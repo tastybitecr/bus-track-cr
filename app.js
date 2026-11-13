@@ -134,6 +134,30 @@ function startGPS() {
         latitude,
         longitude
       ];
+      // ENVIAR UBICACION A FIREBASE
+
+if (driverUID) {
+
+  database.ref("buses/unidad001/location").set({
+
+    latitude: latitude,
+    longitude: longitude,
+    accuracy: accuracy,
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+
+  })
+  .then(() => {
+    console.log("Ubicación enviada a Firebase");
+  })
+  .catch((error) => {
+    console.error("Error enviando ubicación:", error);
+  });
+
+} else {
+
+  console.log("Esperando autenticación del conductor");
+
+}
 
       // Actualizar marcador del autobús
       busMarker.setLatLng(currentPosition);
