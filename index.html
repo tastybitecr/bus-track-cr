@@ -50,14 +50,27 @@
       <div id="map"></div>
     </section>
 
-    <section class="bus-card">
-      <div class="bus-icon">🚌</div>
-      <div class="bus-info">
-        <h3>Autobús de prueba</h3>
-        <p>Ruta demostrativa · Unidad 001</p>
-        <span class="available">● Unidad de demostración</span>
-      </div>
-    </section>
+    <section class="bus-card" id="gps-panel">
+  <div class="bus-icon">📡</div>
+
+  <div class="bus-info">
+    <h3>Control GPS del conductor</h3>
+    <p id="gps-status">GPS desactivado</p>
+    <p id="gps-accuracy">Precisión: pendiente</p>
+    <p id="gps-updated">Última actualización: --</p>
+  </div>
+
+  <div class="gps-actions">
+    <button id="start-gps">
+      Iniciar GPS
+    </button>
+
+    <button id="stop-gps" disabled>
+      Detener
+    </button>
+  </div>
+</section>
+
 
     <section class="stop-card">
       <h3>Paradas de demostración</h3>

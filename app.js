@@ -72,13 +72,133 @@ const busIcon = L.divIcon({
   iconAnchor: [17, 17]
 });
 
-// Posición inicial de demostración
-const busPosition = [10.098, -84.378];
+// BUS TRACK CR
+// MODULO GPS DEL CONDUCTOR
 
-const busMarker = L.marker(busPosition, {
+const busMarker = L.marker(naranjo, {
   icon: busIcon
 }).addTo(map);
 
 busMarker.bindPopup("Autobús de demostración 001");
 
-console.log("BusTrack CR iniciado correctamente");
+let gpsWatcher = null;
+let accuracyCircle = null;
+
+const startButton = document.getElementById("start-gps");
+const stopButton = document.getElementById("stop-gps");
+
+const gpsStatus = document.getElementById("gps-status");
+const gpsAccuracy = document.getElementById("gps-accuracy");
+const gpsUpdated = document.getElementById("gps-updated");
+
+function startGPS() {
+
+  if (!navigator.geolocation) {
+    gpsStatus.textContent =
+      "Este navegador no admite GPS.";
+    return;
+  }
+
+  if (gpsWatcher !== null) {
+    return;
+  }
+
+  gpsStatus.textContent = "Solicitando ubicación...";
+
+  startButton.disabled = true;
+
+  gpsWatcher = navigator.geolocation.watchPosition(
+
+    function(position) {
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      const accuracy = position.coords.accuracy;
+
+      const currentPosition = [
+        latitude,
+        longitude
+      ];
+
+      // Actualizar marcador del autobús
+      busMarker.setLatLng(currentPosition);
+
+      busMarker.setPopupContent(
+        "Unidad 001 - GPS activo"
+      );
+
+      // Centrar mapa en la ubicación actual
+      map.panTo(currentPosition);
+
+      // Mostrar precisión GPS
+      gpsAccuracy.textContent =
+        "Precisión: " + Math.round(accuracy) + " metros";
+
+      // Actualizar círculo de precisión
+      if (accuracyCircle) {
+        accuracyCircle.setLatLng(currentPosition);
+        accuracyCircle.setRadius(accuracy);
+      } else {
+        accuracyCircle = L.circle(currentPosition, {
+          radius: accuracy,
+          color: "#16a6a0",
+          fillOpacity: 0.12
+        }).addTo(map);
+      }
+
+      gpsStatus.textContent = "GPS activo";
+
+      gpsUpdated.textContent =
+        "Última actualización: " +
+        new Date().toLocaleTimeString();
+
+    },
+
+    function(error) {
+
+      const messages = {
+        1: "Permiso de ubicación denegado.",
+        2: "Ubicación no disponible.",
+        3: "Tiempo de espera agotado."
+      };
+
+      gpsStatus.textContent =
+        messages[error.code] ||
+        "Error al obtener ubicación.";
+
+      stopGPS();
+    },
+
+    {
+      enableHighAccuracy: true,
+      maximumAge: 3000,
+      timeout: 20000
+    }
+
+  );
+
+  stopButton.disabled = false;
+}
+
+function stopGPS() {
+
+  if (gpsWatcher !== null) {
+    navigator.geolocation.clearWatch(gpsWatcher);
+    gpsWatcher = null;
+  }
+
+  if (accuracyCircle) {
+    map.removeLayer(accuracyCircle);
+    accuracyCircle = null;
+  }
+
+  gpsStatus.textContent = "GPS detenido";
+
+  startButton.disabled = false;
+  stopButton.disabled = true;
+}
+
+startButton.addEventListener("click", startGPS);
+stopButton.addEventListener("click", stopGPS);
+
+console.log("BusTrack CR GPS listo");

@@ -194,3 +194,48 @@ footer {
     height: 290px;
   }
 }
+
+.gps-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.gps-actions button {
+  border: none;
+  border-radius: 9px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#start-gps {
+  background: #16a6a0;
+  color: white;
+}
+
+#stop-gps {
+  background: #e2e8f0;
+  color: #102a43;
+}
+
+.gps-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#gps-panel {
+  display: block;
+}
+
+#gps-panel .bus-icon {
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+#gps-panel .bus-info p {
+  margin-top: 7px;
+}
