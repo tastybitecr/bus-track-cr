@@ -1,0 +1,76 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#102A43">
+  <title>BusTrack CR</title>
+
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">🚌</div>
+      <div>
+        <h1>BusTrack <span>CR</span></h1>
+        <p>Tu autobús, más cerca</p>
+      </div>
+    </div>
+    <div class="status">
+      <span class="status-dot"></span>
+      DEMO
+    </div>
+  </header>
+
+  <main>
+    <section class="welcome">
+      <h2>¡Hola! ¿A dónde vamos?</h2>
+      <p>Consulta los autobuses en ruta en Naranjo.</p>
+    </section>
+
+    <section class="route-card">
+      <label for="route">Selecciona tu ruta</label>
+      <select id="route">
+        <option value="demo">Naranjo - Ruta demostrativa</option>
+      </select>
+    </section>
+
+    <section class="map-container">
+      <div class="map-heading">
+        <h3>Mapa en vivo</h3>
+        <span id="map-status">Ubicación de demostración</span>
+      </div>
+      <div id="map"></div>
+    </section>
+
+    <section class="bus-card">
+      <div class="bus-icon">🚌</div>
+      <div class="bus-info">
+        <h3>Autobús de prueba</h3>
+        <p>Ruta demostrativa · Unidad 001</p>
+        <span class="available">● Unidad de demostración</span>
+      </div>
+    </section>
+
+    <section class="stop-card">
+      <h3>Paradas de demostración</h3>
+      <div id="stops"></div>
+    </section>
+
+    <footer>
+      <p>BusTrack CR · Versión 0.1.0</p>
+      <p>Proyecto piloto · Naranjo, Costa Rica</p>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
