@@ -84,6 +84,35 @@
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- FIREBASE SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<!-- CONFIGURACION DE FIREBASE -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDqxFa9W19dPhnmboJzd7YEDvhO6Q-gmHo",
+  authDomain: "bustrack-cr-86da9.firebaseapp.com",
+  databaseURL: "https://bustrack-cr-86da9-default-rtdb.firebaseio.com",
+  projectId: "bustrack-cr-86da9",
+  storageBucket: "bustrack-cr-86da9.firebasestorage.app",
+  messagingSenderId: "145112062687",
+  appId: "1:145112062687:web:bd2c1ad6f22227b496676a",
+  measurementId: "G-MZ76WTCTCC"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Inicializar servicios
+const database = firebase.database();
+const auth = firebase.auth();
+
+console.log("Firebase conectado correctamente");
+</script>
   <script src="app.js"></script>
 </body>
 </html>
