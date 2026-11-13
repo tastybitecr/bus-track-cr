@@ -1,6 +1,21 @@
 // BUS TRACK CR
 // Version 0.1.0
 
+// AUTENTICACION DE FIREBASE
+
+let driverUID = null;
+
+auth.signInAnonymously()
+  .then((result) => {
+    driverUID = result.user.uid;
+
+    console.log("Conductor autenticado");
+    console.log("ID del conductor:", driverUID);
+  })
+  .catch((error) => {
+    console.error("Error de autenticación:", error);
+  });
+
 const naranjo = [10.098, -84.378];
 
 // Crear mapa
