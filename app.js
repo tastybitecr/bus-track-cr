@@ -104,7 +104,7 @@ routeStopsRef.on("value", (snapshot) => {
   );
 
 });
-    .bindPopup(stop.name);
+    bindPopup(stop.name);
 
   const item = document.createElement("div");
   item.className = "stop";
