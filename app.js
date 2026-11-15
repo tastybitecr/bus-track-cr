@@ -30,28 +30,80 @@ L.tileLayer(
   }
 ).addTo(map);
 
-// Paradas ilustrativas para demostración
-const stops = [
-  {
-    name: "Parada demostrativa A",
-    position: [10.100, -84.380]
-  },
-  {
-    name: "Parada demostrativa B",
-    position: [10.095, -84.375]
-  },
-  {
-    name: "Parada demostrativa C",
-    position: [10.091, -84.382]
-  }
-];
+// ==========================================
+// PARADAS DINAMICAS DESDE FIREBASE
+// ==========================================
 
-// Mostrar paradas
 const stopsContainer = document.getElementById("stops");
 
-stops.forEach((stop, index) => {
-  L.marker(stop.position)
-    .addTo(map)
+const routeStopsRef = database.ref(
+  "routes/naranjo_san_jose/stops"
+);
+
+const stopMarkers = [];
+
+routeStopsRef.on("value", (snapshot) => {
+
+  const stops = snapshot.val();
+
+  // Limpiar listado y marcadores anteriores
+  stopsContainer.innerHTML = "";
+
+  stopMarkers.forEach(marker => map.removeLayer(marker));
+  stopMarkers.length = 0;
+
+  if (!stops) {
+    stopsContainer.textContent = "No hay paradas registradas.";
+    return;
+  }
+
+  const orderedStops = Object.entries(stops)
+    .sort((a, b) => a[1].order - b[1].order);
+
+  orderedStops.forEach(([stopId, stop]) => {
+
+    // Crear elemento visual
+    const item = document.createElement("div");
+    item.className = "stop";
+
+    const name = document.createElement("strong");
+    name.textContent = `${stop.order}. ${stop.name}`;
+
+    const status = document.createElement("small");
+    status.textContent = stop.verified
+      ? "Parada verificada"
+      : "Pendiente de verificar";
+
+    item.append(name, status);
+    stopsContainer.appendChild(item);
+
+    // Mostrar marcador únicamente si tiene coordenadas verificadas
+    if (
+      stop.verified === true &&
+      stop.active === true &&
+      typeof stop.latitude === "number" &&
+      typeof stop.longitude === "number"
+    ) {
+
+      const marker = L.marker([
+        stop.latitude,
+        stop.longitude
+      ])
+      .addTo(map)
+      .bindPopup(stop.name);
+
+      stopMarkers.push(marker);
+
+    }
+
+  });
+
+  console.log(
+    "Paradas cargadas desde Firebase:",
+    orderedStops.length
+  );
+
+});
     .bindPopup(stop.name);
 
   const item = document.createElement("div");
