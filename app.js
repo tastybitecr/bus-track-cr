@@ -241,3 +241,49 @@ startButton.addEventListener("click", startGPS);
 stopButton.addEventListener("click", stopGPS);
 
 console.log("BusTrack CR GPS listo");
+
+// ==========================================
+// BUS TRACK CR - CARGAR PARADAS DESDE FIREBASE
+// ==========================================
+
+const stopsContainer = document.getElementById("stops-list");
+
+const routeStopsRef = database.ref(
+  "routes/naranjo_san_jose/stops"
+);
+
+routeStopsRef.on("value", (snapshot) => {
+
+  const stops = snapshot.val();
+
+  if (!stopsContainer) {
+    console.warn("No se encontró el contenedor stops-list en HTML");
+    return;
+  }
+
+  stopsContainer.innerHTML = "";
+
+  if (!stops) {
+    stopsContainer.textContent = "No hay paradas registradas.";
+    return;
+  }
+
+  Object.entries(stops)
+    .sort((a, b) => a[1].order - b[1].order)
+    .forEach(([stopId, stop]) => {
+
+      const stopElement = document.createElement("div");
+
+      stopElement.className = "stop-item";
+
+      stopElement.textContent =
+        `${stop.order}. ${stop.name}` +
+        (stop.verified ? "" : " (Pendiente de verificar)");
+
+      stopsContainer.appendChild(stopElement);
+
+    });
+
+  console.log("Paradas cargadas desde Firebase:", Object.keys(stops).length);
+
+});
