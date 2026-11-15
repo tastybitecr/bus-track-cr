@@ -117,7 +117,7 @@ routeStopsRef.on("value", (snapshot) => {
 
   item.append(name, number);
   stopsContainer.appendChild(item);
-});
+);
 
 // Dibujar recorrido ilustrativo
 const routeCoordinates = [
