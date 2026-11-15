@@ -104,7 +104,7 @@ routeStopsRef.on("value", (snapshot) => {
   );
 
 });
-    bindPopup(stop.name);
+    .bindPopup(stop.name);
 
   const item = document.createElement("div");
   item.className = "stop";
@@ -117,7 +117,7 @@ routeStopsRef.on("value", (snapshot) => {
 
   item.append(name, number);
   stopsContainer.appendChild(item);
-);
+});
 
 // Dibujar recorrido ilustrativo
 const routeCoordinates = [
