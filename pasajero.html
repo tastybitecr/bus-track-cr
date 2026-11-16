@@ -8,7 +8,7 @@
     <title>BusTrack CR - Pasajeros</title>
 
     <link rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
     <style>
         body {
@@ -26,14 +26,9 @@
 
         header h1 {
             margin: 0;
-            font-size: 24px;
         }
 
-        header p {
-            margin: 6px 0 0;
-        }
-
-        .info {
+        .panel {
             background: white;
             padding: 15px;
             margin: 12px;
@@ -41,12 +36,27 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
-        #connectionStatus {
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 16px;
+            margin-top: 8px;
+        }
+
+        .distance {
+            font-size: 22px;
+            font-weight: bold;
+            color: #123b5d;
+        }
+
+        .status {
             font-weight: bold;
         }
 
         #map {
-            height: 65vh;
+            height: 55vh;
             width: 100%;
         }
 
@@ -56,7 +66,7 @@
         }
 
         .footer {
-            padding: 12px;
+            padding: 15px;
             text-align: center;
             color: #555;
             font-size: 12px;
@@ -71,27 +81,46 @@
     <p>Seguimiento de autobuses en tiempo real</p>
 </header>
 
-<section class="info">
+<div class="panel">
     <h3>Ruta Naranjo - San José</h3>
 
-    <p>
-        Estado:
-        <span id="connectionStatus">Conectando...</span>
+    <p>Conexión:
+        <span id="connectionStatus" class="status">
+            Conectando...
+        </span>
     </p>
 
     <p id="busInformation">
         Esperando ubicación del autobús...
     </p>
+</div>
 
-    <p id="lastUpdate">
-        Última actualización: pendiente
+<div class="panel">
+    <h3>📍 Selecciona tu parada</h3>
+
+    <select id="stopSelector">
+        <option value="">Cargando paradas...</option>
+    </select>
+
+    <p id="stopInformation">
+        Selecciona una parada para consultar su información.
     </p>
-</section>
+
+    <h3>Distancia del autobús</h3>
+
+    <p id="distanceInformation" class="distance">
+        Pendiente
+    </p>
+
+    <p id="alertInformation" class="status">
+        Esperando información...
+    </p>
+</div>
 
 <div id="map"></div>
 
 <div class="footer">
-    BusTrack CR | Información de ubicación en tiempo real
+    BusTrack CR | Naranjo - San José
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -101,11 +130,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 
 <script>
-    // IMPORTANTE:
-    // Copia aquí exactamente el firebaseConfig que utilizas
-    // actualmente en index.html.
 
-   const firebaseConfig = {
+// ======================================
+// 1. CONFIGURACIÓN FIREBASE
+// ======================================
+
+const firebaseConfig = {
   apiKey: "AIzaSyDqxFa9W19dPhnmboJzd7YEDvhO6Q-gmHo",
   authDomain: "bustrack-cr-86da9.firebaseapp.com",
  databaseURL: "https://bustrack-cr-86da9-default-rtdb.firebaseio.com",
@@ -116,140 +146,409 @@
   measurementId: "G-MZ76WTCTCC"
 };
 
-    firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 
-    const database = firebase.database();
-    const auth = firebase.auth();
+const database = firebase.database();
+const auth = firebase.auth();
 
-    // Inicializar mapa
-    const naranjo = [10.098, -84.378];
 
-    const map = L.map("map").setView(naranjo, 14);
+// ======================================
+// 2. ELEMENTOS HTML
+// ======================================
 
-    L.tileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {
-            attribution: "&copy; OpenStreetMap contributors"
+const connectionStatus =
+    document.getElementById("connectionStatus");
+
+const busInformation =
+    document.getElementById("busInformation");
+
+const stopSelector =
+    document.getElementById("stopSelector");
+
+const stopInformation =
+    document.getElementById("stopInformation");
+
+const distanceInformation =
+    document.getElementById("distanceInformation");
+
+const alertInformation =
+    document.getElementById("alertInformation");
+
+
+// ======================================
+// 3. INICIALIZAR MAPA
+// ======================================
+
+const naranjo = [10.098, -84.378];
+
+const map = L.map("map").setView(naranjo, 14);
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        attribution: "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+const busIcon = L.divIcon({
+    className: "bus-icon",
+    html: "🚌",
+    iconSize: [40, 40],
+    iconAnchor: [20, 20]
+});
+
+let busMarker = null;
+let currentBusPosition = null;
+let selectedStop = null;
+let stopMarkers = [];
+
+
+// ======================================
+// 4. CALCULAR DISTANCIA
+// ======================================
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+
+    const earthRadius = 6371000;
+
+    const toRadians = degrees =>
+        degrees * Math.PI / 180;
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRadians(lat1)) *
+        Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) ** 2;
+
+    const c =
+        2 * Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
+
+    return earthRadius * c;
+}
+
+
+// ======================================
+// 5. ACTUALIZAR DISTANCIA
+// ======================================
+
+function updateDistance() {
+
+    if (!selectedStop) {
+
+        distanceInformation.textContent =
+            "Selecciona una parada";
+
+        alertInformation.textContent =
+            "Esperando selección";
+
+        return;
+    }
+
+    if (
+        selectedStop.verified !== true ||
+        selectedStop.active !== true ||
+        typeof selectedStop.latitude !== "number" ||
+        typeof selectedStop.longitude !== "number"
+    ) {
+
+        distanceInformation.textContent =
+            "No disponible";
+
+        alertInformation.textContent =
+            "Esta parada todavía está pendiente de verificación.";
+
+        return;
+    }
+
+    if (!currentBusPosition) {
+
+        distanceInformation.textContent =
+            "Esperando autobús";
+
+        alertInformation.textContent =
+            "Todavía no recibimos la ubicación del autobús.";
+
+        return;
+    }
+
+    const distance = calculateDistance(
+        currentBusPosition.latitude,
+        currentBusPosition.longitude,
+        selectedStop.latitude,
+        selectedStop.longitude
+    );
+
+    if (distance >= 1000) {
+
+        distanceInformation.textContent =
+            (distance / 1000).toFixed(2) + " km";
+
+    } else {
+
+        distanceInformation.textContent =
+            Math.round(distance) + " metros";
+    }
+
+    if (distance <= 500) {
+
+        alertInformation.textContent =
+            "¡Atención! El autobús está a 500 metros o menos de tu parada.";
+
+    } else {
+
+        alertInformation.textContent =
+            "El autobús todavía está a más de 500 metros.";
+    }
+}
+
+
+// ======================================
+// 6. CARGAR PARADAS DESDE FIREBASE
+// ======================================
+
+function loadStops() {
+
+    const routeStopsRef =
+        database.ref("routes/naranjo_san_jose/stops");
+
+    routeStopsRef.on("value", snapshot => {
+
+        const stops = snapshot.val();
+
+        stopSelector.innerHTML = "";
+
+        stopMarkers.forEach(marker => {
+            map.removeLayer(marker);
+        });
+
+        stopMarkers = [];
+
+        const defaultOption =
+            document.createElement("option");
+
+        defaultOption.value = "";
+        defaultOption.textContent =
+            "Selecciona una parada";
+
+        stopSelector.appendChild(defaultOption);
+
+        if (!stops) {
+
+            stopInformation.textContent =
+                "No hay paradas registradas.";
+
+            return;
         }
-    ).addTo(map);
 
-    // Icono del autobús
-    const busIcon = L.divIcon({
-        className: "bus-icon",
-        html: "🚌",
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
-    });
-
-    let busMarker = null;
-
-    const connectionStatus =
-        document.getElementById("connectionStatus");
-
-    const busInformation =
-        document.getElementById("busInformation");
-
-    const lastUpdate =
-        document.getElementById("lastUpdate");
-
-    // Autenticación anónima del pasajero
-    auth.signInAnonymously()
-
-        .then(() => {
-
-            console.log("Pasajero autenticado correctamente");
-
-            connectionStatus.textContent =
-                "Conectado a BusTrack CR";
-
-            connectionStatus.style.color = "green";
-
-            // Escuchar ubicación del autobús
-            const busLocationRef =
-                database.ref("buses/unidad001/location");
-
-            busLocationRef.on("value", (snapshot) => {
-
-                const location = snapshot.val();
-
-                if (
-                    !location ||
-                    typeof location.latitude !== "number" ||
-                    typeof location.longitude !== "number"
-                ) {
-                    busInformation.textContent =
-                        "Todavía no hay una ubicación disponible.";
-
-                    return;
-                }
-
-                const position = [
-                    location.latitude,
-                    location.longitude
-                ];
-
-                // Crear o actualizar marcador
-                if (busMarker === null) {
-
-                    busMarker = L.marker(position, {
-                        icon: busIcon
-                    }).addTo(map);
-
-                    busMarker.bindPopup(
-                        "Autobús de la ruta Naranjo - San José"
-                    );
-
-                    map.setView(position, 16);
-
-                } else {
-
-                    busMarker.setLatLng(position);
-                }
-
-                busInformation.textContent =
-                    "Autobús localizado correctamente.";
-
-                if (typeof location.accuracy === "number") {
-                    busInformation.textContent +=
-                        " Precisión GPS aproximada: " +
-                        Math.round(location.accuracy) + " metros.";
-                }
-
-                if (typeof location.updatedAt === "number") {
-
-                    const updateDate =
-                        new Date(location.updatedAt);
-
-                    lastUpdate.textContent =
-                        "Última actualización: " +
-                        updateDate.toLocaleTimeString("es-CR");
-
-                } else {
-
-                    lastUpdate.textContent =
-                        "Última actualización recibida.";
-                }
-
-                console.log(
-                    "Ubicación del autobús recibida:",
-                    location
-                );
-            });
-
-        })
-
-        .catch((error) => {
-
-            console.error(
-                "Error de autenticación:",
-                error
+        const orderedStops =
+            Object.entries(stops).sort(
+                (a, b) => a[1].order - b[1].order
             );
 
-            connectionStatus.textContent =
-                "Error de conexión";
+        orderedStops.forEach(([stopId, stop]) => {
 
-            connectionStatus.style.color = "red";
+            const option =
+                document.createElement("option");
+
+            option.value = stopId;
+
+            const verified =
+                stop.verified === true &&
+                stop.active === true &&
+                typeof stop.latitude === "number" &&
+                typeof stop.longitude === "number";
+
+            option.textContent =
+                stop.order + ". " + stop.name +
+                (verified ? "" : " - Pendiente de verificar");
+
+            stopSelector.appendChild(option);
+
+            if (verified) {
+
+                const marker = L.marker([
+                    stop.latitude,
+                    stop.longitude
+                ]).addTo(map);
+
+                marker.bindPopup(stop.name);
+
+                stopMarkers.push(marker);
+            }
         });
+
+        stopInformation.textContent =
+            orderedStops.length +
+            " paradas registradas en la ruta.";
+
+        console.log(
+            "Paradas cargadas:",
+            orderedStops.length
+        );
+    });
+}
+
+
+// ======================================
+// 7. SELECCIÓN DE PARADA
+// ======================================
+
+stopSelector.addEventListener("change", () => {
+
+    const selectedId = stopSelector.value;
+
+    if (!selectedId) {
+
+        selectedStop = null;
+
+        stopInformation.textContent =
+            "No has seleccionado ninguna parada.";
+
+        updateDistance();
+
+        return;
+    }
+
+    database.ref(
+        "routes/naranjo_san_jose/stops/" + selectedId
+    ).once("value").then(snapshot => {
+
+        selectedStop = snapshot.val();
+
+        if (!selectedStop) {
+
+            stopInformation.textContent =
+                "No se pudo encontrar esta parada.";
+
+            updateDistance();
+
+            return;
+        }
+
+        stopInformation.textContent =
+            "Parada seleccionada: " + selectedStop.name;
+
+        updateDistance();
+
+        if (
+            selectedStop.verified === true &&
+            selectedStop.active === true &&
+            typeof selectedStop.latitude === "number" &&
+            typeof selectedStop.longitude === "number"
+        ) {
+
+            map.setView([
+                selectedStop.latitude,
+                selectedStop.longitude
+            ], 16);
+        }
+    });
+});
+
+
+// ======================================
+// 8. RECIBIR UBICACIÓN DEL AUTOBÚS
+// ======================================
+
+function listenBusLocation() {
+
+    const busLocationRef =
+        database.ref("buses/unidad001/location");
+
+    busLocationRef.on("value", snapshot => {
+
+        const location = snapshot.val();
+
+        if (
+            !location ||
+            typeof location.latitude !== "number" ||
+            typeof location.longitude !== "number"
+        ) {
+
+            busInformation.textContent =
+                "Ubicación del autobús no disponible.";
+
+            return;
+        }
+
+        currentBusPosition = location;
+
+        const position = [
+            location.latitude,
+            location.longitude
+        ];
+
+        if (!busMarker) {
+
+            busMarker = L.marker(position, {
+                icon: busIcon
+            }).addTo(map);
+
+            busMarker.bindPopup(
+                "Autobús Naranjo - San José"
+            );
+
+            map.setView(position, 16);
+
+        } else {
+
+            busMarker.setLatLng(position);
+        }
+
+        busInformation.textContent =
+            "Autobús localizado correctamente.";
+
+        updateDistance();
+
+        console.log(
+            "Ubicación recibida:",
+            location
+        );
+    });
+}
+
+
+// ======================================
+// 9. CONECTAR PASAJERO
+// ======================================
+
+auth.signInAnonymously()
+
+.then(() => {
+
+    console.log("Pasajero autenticado");
+
+    connectionStatus.textContent =
+        "Conectado";
+
+    connectionStatus.style.color = "green";
+
+    loadStops();
+
+    listenBusLocation();
+
+})
+
+.catch(error => {
+
+    console.error(
+        "Error de autenticación:",
+        error
+    );
+
+    connectionStatus.textContent =
+        "Error de conexión";
+
+    connectionStatus.style.color = "red";
+});
+
 </script>
 
 </body>
