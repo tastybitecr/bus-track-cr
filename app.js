@@ -106,32 +106,7 @@ routeStopsRef.on("value", (snapshot) => {
 });
     .bindPopup(stop.name);
 
-  const item = document.createElement("div");
-  item.className = "stop";
-
-  const name = document.createElement("strong");
-  name.textContent = stop.name;
-
-  const number = document.createElement("small");
-  number.textContent = `Punto ${index + 1}`;
-
-  item.append(name, number);
-  stopsContainer.appendChild(item);
-});
-
-// Dibujar recorrido ilustrativo
-const routeCoordinates = [
-  naranjo,
-  ...stops.map(stop => stop.position)
-];
-
-L.polyline(routeCoordinates, {
-  color: "#16a6a0",
-  weight: 5,
-  opacity: 0.8
-}).addTo(map);
-
-// Crear icono de autobús
+ // Crear icono de autobús
 const busIcon = L.divIcon({
   html: '<div style="font-size:30px">🚌</div>',
   className: "bus-marker",
