@@ -1,0 +1,256 @@
+```html
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BusTrack CR - Pasajeros</title>
+
+    <link rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f6f9;
+        }
+
+        header {
+            background: #123b5d;
+            color: white;
+            padding: 18px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 6px 0 0;
+        }
+
+        .info {
+            background: white;
+            padding: 15px;
+            margin: 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        #connectionStatus {
+            font-weight: bold;
+        }
+
+        #map {
+            height: 65vh;
+            width: 100%;
+        }
+
+        .bus-icon {
+            font-size: 32px;
+            text-align: center;
+        }
+
+        .footer {
+            padding: 12px;
+            text-align: center;
+            color: #555;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚌 BusTrack CR</h1>
+    <p>Seguimiento de autobuses en tiempo real</p>
+</header>
+
+<section class="info">
+    <h3>Ruta Naranjo - San José</h3>
+
+    <p>
+        Estado:
+        <span id="connectionStatus">Conectando...</span>
+    </p>
+
+    <p id="busInformation">
+        Esperando ubicación del autobús...
+    </p>
+
+    <p id="lastUpdate">
+        Última actualización: pendiente
+    </p>
+</section>
+
+<div id="map"></div>
+
+<div class="footer">
+    BusTrack CR | Información de ubicación en tiempo real
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+
+<script>
+    // IMPORTANTE:
+    // Copia aquí exactamente el firebaseConfig que utilizas
+    // actualmente en index.html.
+
+    const firebaseConfig = {
+        apiKey: "TU_API_KEY",
+        authDomain: "TU_AUTH_DOMAIN",
+        databaseURL: "TU_DATABASE_URL",
+        projectId: "TU_PROJECT_ID",
+        storageBucket: "TU_STORAGE_BUCKET",
+        messagingSenderId: "TU_MESSAGING_SENDER_ID",
+        appId: "TU_APP_ID"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+
+    const database = firebase.database();
+    const auth = firebase.auth();
+
+    // Inicializar mapa
+    const naranjo = [10.098, -84.378];
+
+    const map = L.map("map").setView(naranjo, 14);
+
+    L.tileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {
+            attribution: "&copy; OpenStreetMap contributors"
+        }
+    ).addTo(map);
+
+    // Icono del autobús
+    const busIcon = L.divIcon({
+        className: "bus-icon",
+        html: "🚌",
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+    });
+
+    let busMarker = null;
+
+    const connectionStatus =
+        document.getElementById("connectionStatus");
+
+    const busInformation =
+        document.getElementById("busInformation");
+
+    const lastUpdate =
+        document.getElementById("lastUpdate");
+
+    // Autenticación anónima del pasajero
+    auth.signInAnonymously()
+
+        .then(() => {
+
+            console.log("Pasajero autenticado correctamente");
+
+            connectionStatus.textContent =
+                "Conectado a BusTrack CR";
+
+            connectionStatus.style.color = "green";
+
+            // Escuchar ubicación del autobús
+            const busLocationRef =
+                database.ref("buses/unidad001/location");
+
+            busLocationRef.on("value", (snapshot) => {
+
+                const location = snapshot.val();
+
+                if (
+                    !location ||
+                    typeof location.latitude !== "number" ||
+                    typeof location.longitude !== "number"
+                ) {
+                    busInformation.textContent =
+                        "Todavía no hay una ubicación disponible.";
+
+                    return;
+                }
+
+                const position = [
+                    location.latitude,
+                    location.longitude
+                ];
+
+                // Crear o actualizar marcador
+                if (busMarker === null) {
+
+                    busMarker = L.marker(position, {
+                        icon: busIcon
+                    }).addTo(map);
+
+                    busMarker.bindPopup(
+                        "Autobús de la ruta Naranjo - San José"
+                    );
+
+                    map.setView(position, 16);
+
+                } else {
+
+                    busMarker.setLatLng(position);
+                }
+
+                busInformation.textContent =
+                    "Autobús localizado correctamente.";
+
+                if (typeof location.accuracy === "number") {
+                    busInformation.textContent +=
+                        " Precisión GPS aproximada: " +
+                        Math.round(location.accuracy) + " metros.";
+                }
+
+                if (typeof location.updatedAt === "number") {
+
+                    const updateDate =
+                        new Date(location.updatedAt);
+
+                    lastUpdate.textContent =
+                        "Última actualización: " +
+                        updateDate.toLocaleTimeString("es-CR");
+
+                } else {
+
+                    lastUpdate.textContent =
+                        "Última actualización recibida.";
+                }
+
+                console.log(
+                    "Ubicación del autobús recibida:",
+                    location
+                );
+            });
+
+        })
+
+        .catch((error) => {
+
+            console.error(
+                "Error de autenticación:",
+                error
+            );
+
+            connectionStatus.textContent =
+                "Error de conexión";
+
+            connectionStatus.style.color = "red";
+        });
+</script>
+
+</body>
+</html>
+```
