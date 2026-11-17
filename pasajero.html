@@ -71,6 +71,29 @@
             color: #555;
             font-size: 12px;
         }
+        #enableSoundButton {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    background: #123b5d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#enableSoundButton:disabled {
+    background: #27834a;
+    cursor: default;
+}
+
+.alert-active {
+    color: #c62828;
+    font-size: 18px;
+    font-weight: bold;
+}
     </style>
 </head>
 
@@ -176,7 +199,13 @@ const distanceInformation =
 
 const alertInformation =
     document.getElementById("alertInformation");
+const enableSoundButton =
+    document.getElementById("enableSoundButton");
 
+// Control de alertas
+let soundEnabled = false;
+let audioContext = null;
+let alertAlreadySent = false;
 
 // ======================================
 // 3. INICIALIZAR MAPA
@@ -206,7 +235,83 @@ let currentBusPosition = null;
 let selectedStop = null;
 let stopMarkers = [];
 
+// ======================================
+// ALERTAS SONORAS
+// ======================================
 
+enableSoundButton.addEventListener("click", async () => {
+
+    try {
+
+        const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
+
+        if (!AudioContextClass) {
+            throw new Error("Audio no compatible");
+        }
+
+        if (!audioContext) {
+            audioContext = new AudioContextClass();
+        }
+
+        await audioContext.resume();
+
+        soundEnabled = true;
+
+        enableSoundButton.textContent =
+            "🔔 Sonido de alertas activado";
+
+        enableSoundButton.disabled = true;
+
+        // Sonido de prueba
+        playAlertSound();
+
+    } catch (error) {
+
+        console.error("Error activando sonido:", error);
+
+        enableSoundButton.textContent =
+            "No se pudo activar el sonido";
+    }
+
+});
+
+
+function playAlertSound() {
+
+    if (!soundEnabled || !audioContext) {
+        return;
+    }
+
+    const oscillator = audioContext.createOscillator();
+
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.type = "sine";
+
+    oscillator.frequency.setValueAtTime(
+        880,
+        audioContext.currentTime
+    );
+
+    gainNode.gain.setValueAtTime(
+        0.3,
+        audioContext.currentTime
+    );
+
+    gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.5
+    );
+
+    oscillator.start();
+
+    oscillator.stop(audioContext.currentTime + 0.5);
+
+}
 // ======================================
 // 4. CALCULAR DISTANCIA
 // ======================================
@@ -280,7 +385,19 @@ function updateDistance() {
 
         return;
     }
+// Comprobar precisión del GPS
+if (
+    typeof currentBusPosition.accuracy === "number" &&
+    currentBusPosition.accuracy > 100
+) {
+    distanceInformation.textContent =
+        "Esperando una ubicación GPS más precisa";
 
+    alertInformation.textContent =
+        "La precisión del GPS es insuficiente para generar alertas.";
+
+    return;
+}
     const distance = calculateDistance(
         currentBusPosition.latitude,
         currentBusPosition.longitude,
@@ -299,16 +416,45 @@ function updateDistance() {
             Math.round(distance) + " metros";
     }
 
-    if (distance <= 500) {
+    // ======================================
+// CONTROL DE PROXIMIDAD
+// ======================================
 
-        alertInformation.textContent =
-            "¡Atención! El autobús está a 500 metros o menos de tu parada.";
+if (distance <= 500 && !alertAlreadySent) {
 
-    } else {
+    alertAlreadySent = true;
 
-        alertInformation.textContent =
-            "El autobús todavía está a más de 500 metros.";
-    }
+    alertInformation.textContent =
+        "🔔 ¡ATENCIÓN! El autobús está llegando a tu parada.";
+
+    alertInformation.classList.add("alert-active");
+
+    playAlertSound();
+
+    console.log("Alerta de proximidad activada");
+
+} else if (distance <= 500) {
+
+    alertInformation.textContent =
+        "🚌 El autobús está cerca de tu parada.";
+
+    alertInformation.classList.add("alert-active");
+
+} else if (distance > 600) {
+
+    alertAlreadySent = false;
+
+    alertInformation.textContent =
+        "El autobús todavía está a más de 500 metros.";
+
+    alertInformation.classList.remove("alert-active");
+
+} else {
+
+    alertInformation.textContent =
+        "El autobús se está aproximando a tu parada.";
+
+}
 }
 
 
@@ -404,6 +550,10 @@ function loadStops() {
 // ======================================
 
 stopSelector.addEventListener("change", () => {
+
+    alertAlreadySent = false;
+
+    alertInformation.classList.remove("alert-active");
 
     const selectedId = stopSelector.value;
 
