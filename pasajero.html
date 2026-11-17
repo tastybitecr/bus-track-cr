@@ -534,22 +534,28 @@ etaInformation.textContent =
         return;
     }
 
-    if (!currentBusPosition) {
+  if (!currentBusPosition) {
 
-        distanceInformation.textContent =
-            "Esperando autobús";
+    distanceInformation.textContent =
+        "Esperando autobús";
 
-        alertInformation.textContent =
-            "Todavía no recibimos la ubicación del autobús.";
+    etaInformation.textContent =
+        "Esperando la ubicación GPS del autobús";
 
-        return;
-    }
+    alertInformation.textContent =
+        "Todavía no recibimos la ubicación del autobús.";
+
+    return;
+}
 // Comprobar precisión del GPS
 if (
     typeof currentBusPosition.accuracy === "number" &&
     currentBusPosition.accuracy > 100
 ) {
     distanceInformation.textContent =
+        "Esperando una ubicación GPS más precisa";
+
+    etaInformation.textContent =
         "Esperando una ubicación GPS más precisa";
 
     alertInformation.textContent =
