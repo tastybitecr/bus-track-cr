@@ -202,14 +202,16 @@ function startGPS() {
         })
         .then(() => {
 
-          console.log("Ubicación enviada a Firebase");
+    console.log("Ubicación enviada a Firebase");
 
-        })
-        .catch((error) => {
+    console.log("DATOS GPS ENVIADOS:", {
+        latitude: latitude,
+        longitude: longitude,
+        accuracy: accuracy,
+        updatedAt: new Date().toLocaleTimeString()
+    });
 
-          console.error("Error enviando ubicación:", error);
-
-        });
+})
 
       } else {
 
