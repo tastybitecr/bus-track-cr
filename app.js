@@ -186,38 +186,49 @@ function startGPS() {
 
 
       // ==========================================
-      // ENVIAR UBICACION A FIREBASE
-      // ==========================================
+// ==========================================
+// ENVIAR UBICACION A FIREBASE
+// ==========================================
 
-      if (driverUID) {
+if (driverUID) {
 
-        database.ref("buses/unidad001/location").set({
+    database.ref("buses/unidad001/location").set({
 
-          latitude: latitude,
-          longitude: longitude,
-          accuracy: accuracy,
-
-          updatedAt: firebase.database.ServerValue.TIMESTAMP
-
-        })
-        .then(() => {
-
-    console.log("Ubicación enviada a Firebase");
-
-    console.log("DATOS GPS ENVIADOS:", {
         latitude: latitude,
         longitude: longitude,
         accuracy: accuracy,
-        updatedAt: new Date().toLocaleTimeString()
+
+        updatedAt: firebase.database.ServerValue.TIMESTAMP,
+
+        diagnostic: {
+            driverUID: driverUID,
+            device: navigator.userAgent,
+            receivedAccuracy: accuracy
+        }
+
+    })
+    .then(() => {
+
+        console.log("Ubicación enviada a Firebase");
+
+        console.log("DIAGNÓSTICO GPS:", {
+            accuracy: accuracy,
+            driverUID: driverUID,
+            device: navigator.userAgent
+        });
+
+    })
+    .catch((error) => {
+
+        console.error("Error enviando ubicación:", error);
+
     });
 
-})
+} else {
 
-      } else {
+    console.log("Esperando autenticación del conductor");
 
-        console.log("Esperando autenticación del conductor");
-
-      }
+}
 
 
       // ==========================================
